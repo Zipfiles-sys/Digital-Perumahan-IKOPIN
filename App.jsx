@@ -6,7 +6,7 @@ export default function App() {
   const [user, setUser] = useState(null); 
   const [tempFile, setTempFile] = useState(null); 
   const [highlightId, setHighlightId] = useState(null); 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State untuk navigasi HP
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State Navigasi HP
   
   const [rejectModal, setRejectModal] = useState({ show: false, aspirasiId: null, reason: '' });
   
@@ -149,6 +149,7 @@ export default function App() {
   const lihatDiBeranda = (id) => {
     setHighlightId(id);
     setView('dashboard');
+    setIsSidebarOpen(false);
     setTimeout(() => {
       const element = document.getElementById(`card-${id}`);
       if (element) {
@@ -157,40 +158,25 @@ export default function App() {
     }, 200);
   };
 
-  // --- STYLES (Update for Responsiveness) ---
+  // --- STYLES (Responsif) ---
   const styles = {
     card: (isHighlighted) => ({ 
-      background: 'white', 
-      borderRadius: '16px', 
+      background: 'white', borderRadius: '16px', 
       boxShadow: isHighlighted ? '0 0 0 4px #2563eb' : '0 4px 6px -1px rgba(0,0,0,0.05)', 
-      overflow: 'hidden', 
-      display: 'flex', 
-      flexDirection: 'column',
-      transition: 'all 0.4s ease',
-      border: isHighlighted ? '2px solid #2563eb' : '1px solid #e2e8f0',
-      width: '100%'
+      overflow: 'hidden', display: 'flex', flexDirection: 'column', transition: 'all 0.4s ease',
+      border: isHighlighted ? '2px solid #2563eb' : '1px solid #e2e8f0', width: '100%'
     }),
-    input: { width: '100%', padding: '14px', margin: '8px 0', border: '1px solid #e2e8f0', borderRadius: '12px', boxSizing: 'border-box', outline: 'none' },
-    btn: { padding: '12px 20px', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600', transition: '0.2s' },
+    input: { width: '100%', padding: '14px', margin: '8px 0', border: '1px solid #e2e8f0', borderRadius: '12px', boxSizing: 'border-box', outline: 'none', fontSize: '16px' },
+    btn: { padding: '12px 20px', border: 'none', borderRadius: '12px', cursor: 'pointer', fontWeight: '600', transition: '0.2s', fontSize: '14px' },
     badge: (s) => ({
       padding: '4px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', width: 'fit-content',
       background: s === 'SELESAI' ? '#f0fdf4' : s === 'DIPROSES' ? '#fefce8' : s === 'DITOLAK' ? '#fef2f2' : '#f8fafc',
       color: s === 'SELESAI' ? '#166534' : s === 'DIPROSES' ? '#854d0e' : s === 'DITOLAK' ? '#991b1b' : '#64748b',
       border: `1px solid ${s === 'SELESAI' ? '#bbf7d0' : s === 'DIPROSES' ? '#fef08a' : s === 'DITOLAK' ? '#fecaca' : '#e2e8f0'}`
     }),
-    schCard: {
-      background: 'white',
-      padding: '20px',
-      borderRadius: '16px',
-      border: '1px solid #e2e8f0',
-      display: 'flex',
-      flexWrap: 'wrap',
-      gap: '15px',
-      alignItems: 'center'
-    }
+    schCard: { background: 'white', padding: '20px', borderRadius: '16px', border: '1px solid #e2e8f0', display: 'flex', gap: '15px', alignItems: 'center', flexWrap: 'wrap' }
   };
 
-  // --- LOGIN VIEW ---
   if (view === 'login') {
     return (
       <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '20px' }}>
@@ -209,35 +195,35 @@ export default function App() {
   }
 
   return (
-    <div className="app-container" style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#f1f5f9' }}>
+    <div style={{ display: 'flex', flexDirection: 'column', minHeight: '100vh', fontFamily: 'Inter, sans-serif', background: '#f1f5f9' }}>
       
-      {/* Header Mobile & Tablet */}
+      {/* Top Header Mobile */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderBottom: '1px solid #e2e8f0', position: 'sticky', top: 0, zIndex: 100 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
-          <div style={{ background: '#2563eb', color: 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold', fontSize: '14px' }}>4.0</div>
+          <div style={{ background: '#2563eb', color: 'white', width: '28px', height: '28px', borderRadius: '6px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>4.0</div>
           <h2 style={{ fontSize: '16px', margin: 0, color: '#1e293b' }}>Digital Desa</h2>
         </div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '8px 12px', cursor: 'pointer', fontSize: '18px' }}>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: 'none', border: 'none', fontSize: '24px', cursor: 'pointer' }}>
           {isSidebarOpen ? '✕' : '☰'}
         </button>
       </div>
 
-      {/* Main Layout Wrap */}
       <div style={{ display: 'flex', flex: 1, position: 'relative' }}>
-        
-        {/* Sidebar Overlay (Mobile Only) */}
+        {/* Overlay Sidebar Mobile */}
         {isSidebarOpen && (
-          <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 90 }}></div>
+          <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.4)', zIndex: 90 }}></div>
         )}
 
-        {/* Sidebar */}
+        {/* Sidebar Navigasi */}
         <div style={{ 
           width: '280px', background: '#ffffff', borderRight: '1px solid #e2e8f0', padding: '20px', 
-          display: 'flex', flexDirection: 'column',
-          position: 'absolute', top: 0, left: isSidebarOpen ? 0 : '-280px', bottom: 0,
-          zIndex: 101, transition: 'left 0.3s ease-in-out',
-          height: 'calc(100vh - 60px)'
+          display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: isSidebarOpen ? 0 : '-280px', 
+          bottom: 0, zIndex: 101, transition: '0.3s ease-in-out' 
         }}>
+           <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '30px', marginTop: '20px' }}>
+            <div style={{ background: '#2563eb', color: 'white', width: '32px', height: '32px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>4.0</div>
+            <h2 style={{ fontSize: '18px', margin: 0 }}>Digital Desa</h2>
+          </div>
           <nav style={{ display: 'flex', flexDirection: 'column', gap: '6px', flex: 1 }}>
             <button onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }} style={{ background: view === 'dashboard' ? '#f1f5f9' : 'none', border: 'none', color: view === 'dashboard' ? '#2563eb' : '#64748b', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '10px', fontWeight: '600' }}>🏠 Beranda</button>
             <button onClick={() => { setView('jadwal'); setIsSidebarOpen(false); }} style={{ background: view === 'jadwal' ? '#f1f5f9' : 'none', border: 'none', color: view === 'jadwal' ? '#2563eb' : '#64748b', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '10px', fontWeight: '600' }}>📅 Jadwal Desa</button>
@@ -252,57 +238,48 @@ export default function App() {
               <button onClick={() => { setView('kelola'); setIsSidebarOpen(false); }} style={{ background: view === 'kelola' ? '#f1f5f9' : 'none', border: 'none', color: view === 'kelola' ? '#2563eb' : '#64748b', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '10px', fontWeight: '600' }}>⚙️ Kelola Data</button>
             )}
           </nav>
-          <button onClick={() => { setUser(null); setView('login'); }} style={{ background: '#fff1f2', border: 'none', color: '#e11d48', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '10px', fontWeight: '600', marginTop: '20px' }}>🚪 Keluar</button>
+          <button onClick={() => { setUser(null); setView('login'); }} style={{ background: '#fff1f2', border: 'none', color: '#e11d48', textAlign: 'left', cursor: 'pointer', padding: '12px 16px', borderRadius: '10px', fontWeight: '600' }}>🚪 Keluar</button>
         </div>
 
-        {/* Content Area */}
+        {/* Konten Utama */}
         <div style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
           
-          {/* VIEW: JADWAL DESA */}
+          {/* VIEW: JADWAL */}
           {view === 'jadwal' && (
             <div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '30px' }}>
-                <h1 style={{margin: 0, fontSize: '22px'}}>Kalender Desa</h1>
+              <div style={{ marginBottom: '20px' }}>
+                <h1 style={{fontSize: '22px', margin: '0 0 5px 0'}}>Jadwal Desa</h1>
                 {user.role === 'admin' && (
-                  <button onClick={() => setView('tambah_jadwal')} style={{ ...styles.btn, background: '#2563eb', color: 'white', width: 'fit-content' }}>+ Buat Jadwal</button>
+                  <button onClick={() => setView('tambah_jadwal')} style={{ ...styles.btn, background: '#2563eb', color: 'white', marginTop: '10px' }}>+ Tambah</button>
                 )}
               </div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: '15px' }}>
-                {schedules.length === 0 ? (
-                  <div style={{ padding: '60px 20px', textAlign: 'center', background: 'white', borderRadius: '20px', border: '2px dashed #e2e8f0' }}>
-                    <p style={{color: '#64748b'}}>Belum ada agenda desa.</p>
-                  </div>
-                ) : schedules.map(s => (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                {schedules.length === 0 ? <p style={{textAlign: 'center', color: '#64748b', padding: '40px'}}>Belum ada jadwal.</p> : 
+                  schedules.map(s => (
                   <div key={s.id} style={styles.schCard}>
                     <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '10px', textAlign: 'center', minWidth: '60px' }}>
-                      <div style={{ fontSize: '18px', fontWeight: 'bold', color: '#2563eb' }}>{s.date.split('-')[2]}</div>
-                      <div style={{ fontSize: '10px', color: '#64748b' }}>Bulan {s.date.split('-')[1]}</div>
+                      <div style={{ fontWeight: 'bold', color: '#2563eb' }}>{s.date.split('-')[2]}</div>
+                      <div style={{ fontSize: '10px' }}>{s.date.split('-')[1]}</div>
                     </div>
-                    <div style={{ flex: 1 }}>
-                      <h4 style={{ margin: '0 0 5px 0' }}>{s.title}</h4>
-                      <p style={{ margin: 0, fontSize: '12px', color: '#64748b' }}>🕒 {s.time} | 📍 {s.location}</p>
+                    <div style={{flex: 1}}>
+                      <h4 style={{margin: '0 0 4px 0'}}>{s.title}</h4>
+                      <div style={{fontSize: '12px', color: '#64748b'}}>🕒 {s.time} | 📍 {s.location}</div>
                     </div>
-                    {user.role === 'admin' && (
-                      <button onClick={() => deleteSchedule(s.id)} style={{ background: 'none', border: 'none', color: '#ef4444', cursor: 'pointer' }}>🗑️</button>
-                    )}
+                    {user.role === 'admin' && <button onClick={() => deleteSchedule(s.id)} style={{border:'none', background:'none', color:'#ef4444'}}>🗑️</button>}
                   </div>
                 ))}
               </div>
             </div>
           )}
 
-          {/* VIEW: DASHBOARD */}
+          {/* VIEW: BERANDA */}
           {view === 'dashboard' && (
             <div>
-              <h2 style={{ fontSize: '20px', marginBottom: '20px' }}>Kabar Desa</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px' }}>
-                {aspirations.length === 0 ? (
-                  <p style={{color: '#64748b'}}>Belum ada kabar terbaru.</p>
-                ) : aspirations.map(a => (
+              <h1 style={{fontSize: '22px'}}>Kabar Desa</h1>
+              <div style={{ display: 'grid', gridTemplateColumns: '1fr', gap: '20px', marginTop: '15px' }}>
+                {aspirations.length === 0 ? <p>Belum ada kabar terbaru.</p> : aspirations.map(a => (
                   <div key={a.id} id={`card-${a.id}`} style={styles.card(highlightId === a.id)}>
-                    <div style={{ width: '100%', height: '180px', background: '#1e293b', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-                      <img src={a.lampiran || "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?w=400"} style={{ maxWidth: '100%', maxHeight: '100%', objectFit: 'contain' }} alt="img" />
-                    </div>
+                    <img src={a.lampiran || "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?w=800"} style={{ width: '100%', height: '180px', objectFit: 'cover' }} alt="img" />
                     <div style={{ padding: '15px' }}>
                       <span style={styles.badge(a.status)}>{a.status}</span>
                       <h4 style={{ margin: '10px 0 5px' }}>{a.judul}</h4>
@@ -317,31 +294,31 @@ export default function App() {
           {/* VIEW: CHAT GRUP */}
           {view === 'chat_grup' && (
             <div style={{ display: 'flex', flexDirection: 'column', height: 'calc(100vh - 120px)' }}>
-              <h2 style={{fontSize: '20px'}}>Ruang Warga</h2>
-              <div style={{ flex: 1, background: 'white', borderRadius: '16px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
+              <h1 style={{fontSize: '20px'}}>Obrolan Warga</h1>
+              <div style={{ flex: 1, background: 'white', borderRadius: '12px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '8px' }}>
                 {globalMessages.map(m => (
                   <div key={m.id} style={{ alignSelf: m.sender === user.name ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
                     <div style={{ background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', padding: '10px', borderRadius: '12px', fontSize: '14px' }}>
-                      <small style={{display: 'block', fontWeight: 'bold', fontSize: '10px', opacity: 0.8}}>{m.sender}</small>
+                      <small style={{display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '2px'}}>{m.sender}</small>
                       {m.text}
                     </div>
                   </div>
                 ))}
               </div>
               <form onSubmit={kirimPesanGrup} style={{display: 'flex', gap: '8px', marginTop: '10px'}}>
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Tulis..." style={{...styles.input, margin: 0}}/>
+                <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik pesan..." style={{...styles.input, margin: 0}} />
                 <button type="submit" style={{...styles.btn, background: '#2563eb', color: 'white'}}>Kirim</button>
               </form>
             </div>
           )}
 
-          {/* VIEW: FORM ASPIRASI */}
+          {/* Sisa view lainnya seperti form, kelola, dll mengikuti logika yang sama dengan penyesuaian kontainer lebar penuh */}
           {view === 'form' && (
             <div style={{maxWidth: '100%'}}>
-              <h2>Buat Aspirasi</h2>
+              <h1>Buat Aspirasi</h1>
               <div style={{...styles.card(false), padding: '20px'}}>
                 <form onSubmit={tambahAspirasi}>
-                  <input name="judul" placeholder="Judul Laporan" style={styles.input} required/>
+                  <input name="judul" placeholder="Judul" style={styles.input} required/>
                   <textarea name="deskripsi" placeholder="Deskripsi..." style={{...styles.input, height: '100px'}} required/>
                   <input type="file" onChange={handleFileChange} style={{display: 'block', margin: '10px 0'}}/>
                   <button type="submit" style={{...styles.btn, background: '#2563eb', color: 'white', width: '100%'}}>Kirim</button>
@@ -350,27 +327,26 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW: KELOLA DATA (ADMIN) */}
           {view === 'kelola' && user.role === 'admin' && (
-            <div style={{ overflowX: 'auto' }}>
-              <h2>Kelola Data</h2>
+            <div style={{overflowX: 'auto'}}>
+              <h1>Kelola Data</h1>
               <table style={{ width: '100%', minWidth: '500px', borderCollapse: 'collapse', background: 'white', borderRadius: '12px' }}>
-                <thead>
-                  <tr style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
-                    <th style={{ padding: '10px' }}>Warga</th>
-                    <th style={{ padding: '10px' }}>Status</th>
-                    <th style={{ padding: '10px' }}>Aksi</th>
+                <thead style={{ background: '#f8fafc', borderBottom: '1px solid #e2e8f0' }}>
+                  <tr>
+                    <th style={{ padding: '12px' }}>Pelapor</th>
+                    <th style={{ padding: '12px' }}>Status</th>
+                    <th style={{ padding: '12px' }}>Aksi</th>
                   </tr>
                 </thead>
                 <tbody>
                   {aspirations.map(a => (
                     <tr key={a.id} style={{ borderBottom: '1px solid #f1f5f9' }}>
-                      <td style={{ padding: '10px' }}>{a.nama}</td>
-                      <td style={{ padding: '10px' }}>{a.status}</td>
-                      <td style={{ padding: '10px', display: 'flex', gap: '5px' }}>
-                        <button onClick={() => gantiStatus(a.id, 'DIPROSES')} style={{fontSize: '10px', padding: '5px'}}>⏳</button>
-                        <button onClick={() => gantiStatus(a.id, 'SELESAI')} style={{fontSize: '10px', padding: '5px'}}>✅</button>
-                        <button onClick={() => gantiStatus(a.id, 'DITOLAK')} style={{fontSize: '10px', padding: '5px'}}>❌</button>
+                      <td style={{ padding: '12px' }}>{a.nama}</td>
+                      <td style={{ padding: '12px' }}>{a.status}</td>
+                      <td style={{ padding: '12px', display: 'flex', gap: '5px' }}>
+                        <button onClick={() => gantiStatus(a.id, 'SELESAI')} style={{fontSize: '10px'}}>✅</button>
+                        <button onClick={() => gantiStatus(a.id, 'DITOLAK')} style={{fontSize: '10px'}}>❌</button>
+                        <button onClick={() => lihatDiBeranda(a.id)} style={{fontSize: '10px'}}>👁️</button>
                       </td>
                     </tr>
                   ))}
@@ -378,13 +354,12 @@ export default function App() {
               </table>
             </div>
           )}
-          
-          {/* Lanjutan View Tambah Jadwal, Riwayat, dll sesuai logika asli */}
+
           {view === 'tambah_jadwal' && (
             <div style={{maxWidth: '100%'}}>
-              <h2>Tambah Jadwal</h2>
+              <h1>Tambah Jadwal</h1>
               <form onSubmit={handleAddSchedule} style={{...styles.card(false), padding: '20px'}}>
-                <input name="title" placeholder="Nama Kegiatan" style={styles.input} required/>
+                <input name="title" placeholder="Kegiatan" style={styles.input} required/>
                 <input name="date" type="date" style={styles.input} required/>
                 <input name="time" type="time" style={styles.input} required/>
                 <input name="location" placeholder="Lokasi" style={styles.input} required/>
