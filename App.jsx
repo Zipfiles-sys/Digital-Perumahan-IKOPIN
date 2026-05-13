@@ -1,23 +1,46 @@
 import React, { useState, useEffect } from 'react';
 
 export default function App() {
-  // --- STATE UTAMA ---
+  // --- STATE UTAMA (Inisialisasi dari LocalStorage) ---
   const [view, setView] = useState('login'); 
   const [user, setUser] = useState(null); 
   const [tempFile, setTempFile] = useState(null); 
   const [highlightId, setHighlightId] = useState(null); 
-  const [isSidebarOpen, setIsSidebarOpen] = useState(false); // State untuk Toggle Menu di HP
+  const [isSidebarOpen, setIsSidebarOpen] = useState(false); 
   
   const [rejectModal, setRejectModal] = useState({ show: false, aspirasiId: null, reason: '' });
-  
-  // State Data
   const [chatInput, setChatInput] = useState('');
-  const [globalMessages, setGlobalMessages] = useState([]);
-  const [aspirations, setAspirations] = useState([]);
-  const [schedules, setSchedules] = useState([]);
+
+  // Mengambil data awal dari LocalStorage saat pertama kali aplikasi dibuka
+  const [globalMessages, setGlobalMessages] = useState(() => {
+    const saved = localStorage.getItem('desa_chats');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [aspirations, setAspirations] = useState(() => {
+    const saved = localStorage.getItem('desa_aspirasi');
+    return saved ? JSON.parse(saved) : [];
+  });
+  const [schedules, setSchedules] = useState(() => {
+    const saved = localStorage.getItem('desa_jadwal');
+    return saved ? JSON.parse(saved) : [];
+  });
+
   const [notificationPermission, setNotificationPermission] = useState('default');
 
-  // --- LOGIKA MASA BERLAKU DATA (30 Hari) ---
+  // --- LOGIKA PENYIMPANAN OTOMATIS KE LOCALSTORAGE ---
+  useEffect(() => {
+    localStorage.setItem('desa_chats', JSON.stringify(globalMessages));
+  }, [globalMessages]);
+
+  useEffect(() => {
+    localStorage.setItem('desa_aspirasi', JSON.stringify(aspirations));
+  }, [aspirations]);
+
+  useEffect(() => {
+    localStorage.setItem('desa_jadwal', JSON.stringify(schedules));
+  }, [schedules]);
+
+  // --- LOGIKA MASA BERLAKU DATA (Auto-Delete 30 Hari) ---
   const MS_PER_MONTH = 30 * 24 * 60 * 60 * 1000;
 
   useEffect(() => {
@@ -41,6 +64,7 @@ export default function App() {
     }
   }, [highlightId]);
 
+  // --- FUNGSI LOGIN ---
   const handleLogin = (e) => {
     e.preventDefault();
     const name = e.target.nama.value;
@@ -50,23 +74,22 @@ export default function App() {
     else { alert("Kredensial tidak valid."); }
   };
 
+  // --- FUNGSI DATA ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) {
-        alert("Ukuran foto terlalu besar (Maks 2MB).");
-        return;
-      }
+    if (file && file.size <= 2 * 1024 * 1024) {
       const reader = new FileReader();
       reader.onloadend = () => setTempFile(reader.result);
       reader.readAsDataURL(file);
+    } else if (file) {
+      alert("Ukuran foto terlalu besar (Maks 2MB).");
     }
   };
 
   const tambahAspirasi = (e) => {
     e.preventDefault();
     const baru = {
-      id: "ID-" + Math.floor(Math.random() * 1000),
+      id: "ID-" + Date.now(),
       nama: user.name,
       judul: e.target.judul.value,
       deskripsi: e.target.deskripsi.value,
@@ -96,6 +119,27 @@ export default function App() {
     setChatInput('');
   };
 
+  const handleAddSchedule = (e) => {
+    e.preventDefault();
+    const newSch = {
+      id: "SCH-" + Date.now(),
+      title: e.target.title.value,
+      date: e.target.date.value,
+      time: e.target.time.value,
+      location: e.target.location.value,
+      description: e.target.description.value,
+      createdAt: Date.now()
+    };
+    setSchedules([newSch, ...schedules]);
+    setView('jadwal');
+  };
+
+  const deleteSchedule = (id) => {
+    if(confirm("Hapus jadwal ini?")) {
+      setSchedules(schedules.filter(s => s.id !== id));
+    }
+  };
+
   const gantiStatus = (id, statusBaru) => {
     if (statusBaru === 'DITOLAK') {
       setRejectModal({ show: true, aspirasiId: id, reason: '' });
@@ -110,46 +154,10 @@ export default function App() {
     setRejectModal({ show: false, aspirasiId: null, reason: '' });
   };
 
-  const requestNotifyPermission = () => {
-    if ("Notification" in window) {
-      Notification.requestPermission().then(permission => {
-        setNotificationPermission(permission);
-      });
-    }
-  };
-
-  const sendNotification = (title, body) => {
-    if (notificationPermission === 'granted') {
-      new Notification(title, { body, icon: 'https://cdn-icons-png.flaticon.com/512/3652/3652191.png' });
-    }
-  };
-
-  const handleAddSchedule = (e) => {
-    e.preventDefault();
-    const newSch = {
-      id: "SCH-" + Math.floor(Math.random() * 10000),
-      title: e.target.title.value,
-      date: e.target.date.value,
-      time: e.target.time.value,
-      location: e.target.location.value,
-      description: e.target.description.value,
-      createdAt: Date.now()
-    };
-    setSchedules([newSch, ...schedules]);
-    sendNotification("Jadwal Baru Ditambahkan", `${newSch.title} pada ${newSch.date} di ${newSch.location}`);
-    setView('jadwal');
-  };
-
-  const deleteSchedule = (id) => {
-    if(confirm("Hapus jadwal ini?")) {
-      setSchedules(schedules.filter(s => s.id !== id));
-    }
-  };
-
   const lihatDiBeranda = (id) => {
     setHighlightId(id);
     setView('dashboard');
-    setIsSidebarOpen(false); // Tutup sidebar di HP saat navigasi
+    setIsSidebarOpen(false);
     setTimeout(() => {
       const element = document.getElementById(`card-${id}`);
       if (element) {
@@ -197,7 +205,7 @@ export default function App() {
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', fontFamily: 'sans-serif', background: '#f1f5f9', overflow: 'hidden' }}>
       
-      {/* HEADER MOBILE & LAPTOP */}
+      {/* HEADER */}
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderBottom: '1px solid #e2e8f0', zIndex: 110 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px' }}>
           <div style={{ background: '#2563eb', color: 'white', width: '30px', height: '30px', borderRadius: '8px', display: 'flex', alignItems: 'center', justifyContent: 'center', fontWeight: 'bold' }}>4.0</div>
@@ -210,7 +218,7 @@ export default function App() {
 
       <div style={{ display: 'flex', flex: 1, position: 'relative', overflow: 'hidden' }}>
         
-        {/* SIDEBAR NAVIGASI (ANIMASI SLIDE DI HP) */}
+        {/* SIDEBAR */}
         <div style={{ 
           position: 'absolute', top: 0, left: isSidebarOpen ? 0 : '-100%', 
           width: '280px', height: '100%', background: 'white', 
@@ -222,7 +230,10 @@ export default function App() {
             <button onClick={() => { setView('jadwal'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'jadwal' ? '#eff6ff' : 'none', color: view === 'jadwal' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>📅 Jadwal Desa</button>
             <button onClick={() => { setView('chat_grup'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'chat_grup' ? '#eff6ff' : 'none', color: view === 'chat_grup' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>💬 Ruang Warga</button>
             {user.role === 'warga' && (
-              <button onClick={() => { setView('form'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'form' ? '#eff6ff' : 'none', color: view === 'form' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>✍️ Buat Aspirasi</button>
+              <>
+                <button onClick={() => { setView('form'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'form' ? '#eff6ff' : 'none', color: view === 'form' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>✍️ Buat Aspirasi</button>
+                <button onClick={() => { setView('riwayat'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'riwayat' ? '#eff6ff' : 'none', color: view === 'riwayat' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>📋 Laporanku</button>
+              </>
             )}
             {user.role === 'admin' && (
               <button onClick={() => { setView('kelola'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', borderRadius: '10px', border: 'none', background: view === 'kelola' ? '#eff6ff' : 'none', color: view === 'kelola' ? '#2563eb' : '#64748b', fontWeight: 'bold' }}>⚙️ Kelola Data</button>
@@ -234,27 +245,31 @@ export default function App() {
         {/* OVERLAY MENU */}
         {isSidebarOpen && <div onClick={() => setIsSidebarOpen(false)} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.3)', zIndex: 100, marginTop: '60px' }}></div>}
 
-        {/* AREA KONTEN UTAMA */}
+        {/* AREA KONTEN */}
         <div style={{ flex: 1, padding: '20px', overflowY: 'auto', boxSizing: 'border-box', width: '100%' }}>
           
-          {/* VIEW: DASHBOARD (BERANDA) */}
           {view === 'dashboard' && (
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
               <h2 style={{ fontSize: '22px', color: '#1e293b', marginBottom: '15px' }}>Kabar Desa</h2>
               {aspirations.length === 0 ? <p style={{color:'#64748b'}}>Belum ada informasi terbaru.</p> : aspirations.map(a => (
                 <div key={a.id} id={`card-${a.id}`} style={styles.card(highlightId === a.id)}>
-                  <img src={a.lampiran || "https://images.unsplash.com/photo-1516733725897-1aa73b87c8e8?w=800"} style={{ width: '100%', height: '200px', objectFit: 'cover' }} alt="img" />
+                  <img src={a.lampiran || "https://via.placeholder.com/800x400?text=Digital+Desa+4.0"} style={{ width: '100%', height: '200px', objectFit: 'cover' }} alt="img" />
                   <div style={{ padding: '15px' }}>
                     <span style={styles.badge(a.status)}>{a.status}</span>
                     <h3 style={{ margin: '10px 0 5px', fontSize: '18px' }}>{a.judul}</h3>
                     <p style={{ fontSize: '14px', color: '#64748b', margin: 0 }}>{a.deskripsi}</p>
+                    {a.status === 'DITOLAK' && a.alasanAdmin && (
+                      <div style={{marginTop:'10px', background:'#fef2f2', padding:'10px', borderRadius:'8px', border:'1px solid #fecaca'}}>
+                         <small style={{color:'#991b1b', fontWeight:'bold'}}>Alasan Ditolak:</small>
+                         <p style={{margin:0, fontSize:'13px', color:'#b91c1c'}}>{a.alasanAdmin}</p>
+                      </div>
+                    )}
                   </div>
                 </div>
               ))}
             </div>
           )}
 
-          {/* VIEW: JADWAL */}
           {view === 'jadwal' && (
             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '20px' }}>
@@ -262,7 +277,7 @@ export default function App() {
                 {user.role === 'admin' && <button onClick={() => setView('tambah_jadwal')} style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>+ Tambah</button>}
               </div>
               <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {schedules.map(s => (
+                {schedules.length === 0 ? <p>Belum ada jadwal kegiatan.</p> : schedules.map(s => (
                   <div key={s.id} style={styles.schCard}>
                     <div style={{ background: '#eff6ff', padding: '10px', borderRadius: '10px', textAlign: 'center', minWidth: '60px' }}>
                       <div style={{ fontWeight: 'bold', color: '#2563eb' }}>{s.date.split('-')[2]}</div>
@@ -279,16 +294,16 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW: CHAT GRUP */}
           {view === 'chat_grup' && (
             <div style={{ display: 'flex', flexDirection: 'column', height: '100%', maxWidth: '800px', margin: '0 auto' }}>
               <h2 style={{ fontSize: '20px', marginBottom: '10px' }}>Ruang Warga</h2>
               <div style={{ flex: 1, background: 'white', borderRadius: '12px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '10px' }}>
-                {globalMessages.map(m => (
+                {globalMessages.length === 0 ? <p style={{textAlign:'center', color:'#94a3b8'}}>Belum ada obrolan.</p> : globalMessages.map(m => (
                   <div key={m.id} style={{ alignSelf: m.sender === user.name ? 'flex-end' : 'flex-start', maxWidth: '85%' }}>
                     <div style={{ background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', padding: '10px', borderRadius: '12px', fontSize: '14px' }}>
                       <small style={{display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '2px'}}>{m.sender}</small>
                       {m.text}
+                      <small style={{display:'block', textAlign:'right', fontSize:'9px', marginTop:'2px', opacity:0.7}}>{m.time}</small>
                     </div>
                   </div>
                 ))}
@@ -300,7 +315,6 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW: FORM ASPIRASI */}
           {view === 'form' && (
             <div style={{ maxWidth: '500px', margin: '0 auto' }}>
               <h2>Buat Aspirasi</h2>
@@ -313,7 +327,23 @@ export default function App() {
             </div>
           )}
 
-          {/* VIEW: KELOLA (ADMIN) */}
+          {view === 'riwayat' && (
+             <div style={{ maxWidth: '800px', margin: '0 auto' }}>
+                <h2>Laporanku</h2>
+                {aspirations.filter(a => a.nama === user.name).length === 0 ? <p>Belum ada laporan yang Anda kirim.</p> : 
+                 aspirations.filter(a => a.nama === user.name).map(a => (
+                   <div key={a.id} style={{...styles.card(false), padding:'15px', marginBottom:'10px'}}>
+                      <div style={{display:'flex', justifyContent:'space-between', alignItems:'center'}}>
+                         <h4 style={{margin:0}}>{a.judul}</h4>
+                         <span style={styles.badge(a.status)}>{a.status}</span>
+                      </div>
+                      <p style={{fontSize:'13px', color:'#64748b', margin:'8px 0 0'}}>{a.deskripsi}</p>
+                   </div>
+                 ))
+                }
+             </div>
+          )}
+
           {view === 'kelola' && user.role === 'admin' && (
             <div style={{ overflowX: 'auto', maxWidth: '800px', margin: '0 auto' }}>
               <h2>Kelola Data</h2>
@@ -331,9 +361,10 @@ export default function App() {
                       <td style={{ padding: '12px' }}>{a.nama}</td>
                       <td style={{ padding: '12px' }}>{a.status}</td>
                       <td style={{ padding: '12px', display: 'flex', gap: '5px' }}>
-                        <button onClick={() => gantiStatus(a.id, 'SELESAI')} style={{fontSize:'12px'}}>✅</button>
-                        <button onClick={() => gantiStatus(a.id, 'DITOLAK')} style={{fontSize:'12px'}}>❌</button>
-                        <button onClick={() => lihatDiBeranda(a.id)} style={{fontSize:'12px'}}>👁️</button>
+                        <button onClick={() => gantiStatus(a.id, 'DIPROSES')} style={{fontSize:'12px', border:'none', background:'#fefce8', borderRadius:'4px', padding:'4px'}}>⏳</button>
+                        <button onClick={() => gantiStatus(a.id, 'SELESAI')} style={{fontSize:'12px', border:'none', background:'#f0fdf4', borderRadius:'4px', padding:'4px'}}>✅</button>
+                        <button onClick={() => gantiStatus(a.id, 'DITOLAK')} style={{fontSize:'12px', border:'none', background:'#fef2f2', borderRadius:'4px', padding:'4px'}}>❌</button>
+                        <button onClick={() => lihatDiBeranda(a.id)} style={{fontSize:'12px', border:'none', background:'#eff6ff', borderRadius:'4px', padding:'4px'}}>👁️</button>
                       </td>
                     </tr>
                   ))}
@@ -342,7 +373,6 @@ export default function App() {
             </div>
           )}
           
-          {/* VIEW: TAMBAH JADWAL (ADMIN) */}
           {view === 'tambah_jadwal' && user.role === 'admin' && (
              <div style={{ maxWidth: '500px', margin: '0 auto' }}>
              <h2>Buat Jadwal Baru</h2>
@@ -352,7 +382,10 @@ export default function App() {
                <input name="time" type="time" style={styles.input} required />
                <input name="location" placeholder="Lokasi" style={styles.input} required />
                <textarea name="description" placeholder="Keterangan..." style={styles.input} />
-               <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%' }}>Simpan</button>
+               <div style={{display:'flex', gap:'10px', marginTop:'10px'}}>
+                  <button type="button" onClick={() => setView('jadwal')} style={{...styles.btn, background:'#f1f5f9', color:'#64748b', flex:1}}>Batal</button>
+                  <button type="submit" style={{...styles.btn, background:'#2563eb', color:'white', flex:1}}>Simpan</button>
+               </div>
              </form>
            </div>
           )}
@@ -365,9 +398,9 @@ export default function App() {
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div style={{ ...styles.card(false), maxWidth: '350px', padding: '20px' }}>
             <h4 style={{margin: '0 0 10px 0'}}>Alasan Penolakan</h4>
-            <textarea style={styles.input} value={rejectModal.reason} onChange={(e) => setRejectModal({...rejectModal, reason: e.target.value})}/>
+            <textarea style={styles.input} value={rejectModal.reason} onChange={(e) => setRejectModal({...rejectModal, reason: e.target.value})} placeholder="Tulis alasan..." />
             <div style={{ display: 'flex', gap: '10px' }}>
-              <button onClick={() => setRejectModal({ show: false, aspirasiId: null, reason: '' })} style={styles.btn}>Batal</button>
+              <button onClick={() => setRejectModal({ show: false, aspirasiId: null, reason: '' })} style={{...styles.btn, background:'#f1f5f9', color:'#64748b'}}>Batal</button>
               <button onClick={submitPenolakan} style={{ ...styles.btn, background: '#ef4444', color: 'white' }}>Tolak</button>
             </div>
           </div>
