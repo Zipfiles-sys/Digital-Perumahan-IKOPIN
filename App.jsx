@@ -19,19 +19,11 @@ export default function App() {
   const [schedules, setSchedules] = useState([]);
   const [rejectModal, setRejectModal] = useState({ show: false, aspirasiId: null, reason: '' });
 
-  // --- AMBIL DATA DARI SUPABASE ---
   useEffect(() => {
     fetchInitialData();
-
-    // Listener Real-time untuk Chat
     const chatSub = supabase.channel('room_chats').on('postgres_changes', { event: 'INSERT', table: 'desa_chats' }, fetchInitialData).subscribe();
-    
-    // Listener Real-time untuk Aspirasi
     const aspSub = supabase.channel('room_asp').on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, fetchInitialData).subscribe();
-    
-    // Listener Real-time untuk Jadwal
     const schSub = supabase.channel('room_sch').on('postgres_changes', { event: '*', table: 'desa_jadwal' }, fetchInitialData).subscribe();
-
     return () => {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(aspSub);
@@ -42,15 +34,12 @@ export default function App() {
   async function fetchInitialData() {
     const { data: chats } = await supabase.from('desa_chats').select('*').order('created_at', { ascending: true });
     if (chats) setGlobalMessages(chats);
-
     const { data: aspi } = await supabase.from('desa_aspirasi').select('*').order('created_at', { ascending: false });
     if (aspi) setAspirations(aspi);
-
     const { data: sch } = await supabase.from('desa_jadwal').select('*').order('date', { ascending: true });
     if (sch) setSchedules(sch);
   }
 
-  // --- LOGIKA LOGIN & LOGOUT ---
   const handleLogin = (e) => {
     e.preventDefault();
     const name = e.target.nama.value;
@@ -60,25 +49,11 @@ export default function App() {
     else alert("Kata sandi salah!");
   };
 
-  const handleLogout = () => {
-    setUser(null);
-    setView('login');
-    setIsSidebarOpen(false);
-  };
+  const handleLogout = () => { setUser(null); setView('login'); setIsSidebarOpen(false); };
 
-  // --- FITUR CHAT ---
-  const kirimPesanGrup = async (e) => {
-    e.preventDefault();
-    if (!chatInput.trim()) return;
-    await supabase.from('desa_chats').insert([{ sender: user.name, text: chatInput }]);
-    setChatInput('');
-  };
-
-  // --- FITUR ASPIRASI ---
   const handleFileChange = (e) => {
     const file = e.target.files[0];
-    if (file) {
-      if (file.size > 2 * 1024 * 1024) return alert("File terlalu besar (Maks 2MB)");
+    if (file && file.size <= 2 * 1024 * 1024) {
       const reader = new FileReader();
       reader.onloadend = () => setTempFile(reader.result);
       reader.readAsDataURL(file);
@@ -87,18 +62,14 @@ export default function App() {
 
   const tambahAspirasi = async (e) => {
     e.preventDefault();
-    const { error } = await supabase.from('desa_aspirasi').insert([{ 
-      nama: user.name, 
-      judul: e.target.judul.value, 
-      deskripsi: e.target.deskripsi.value,
-      status: 'DIKIRIM',
-      lampiran: tempFile
-    }]);
-    if (!error) {
-      alert("Aspirasi terkirim!");
-      setTempFile(null);
-      setView('dashboard');
-    }
+    await supabase.from('desa_aspirasi').insert([{ nama: user.name, judul: e.target.judul.value, deskripsi: e.target.deskripsi.value, status: 'DIKIRIM', lampiran: tempFile }]);
+    alert("Aspirasi terkirim!"); setTempFile(null); setView('dashboard');
+  };
+
+  const tambahJadwal = async (e) => {
+    e.preventDefault();
+    await supabase.from('desa_jadwal').insert([{ title: e.target.title.value, date: e.target.date.value, time: e.target.time.value, location: e.target.location.value, description: e.target.description.value }]);
+    alert("Jadwal dipublikasikan!"); setView('jadwal');
   };
 
   const updateStatusAspirasi = async (id, status, alasan = null) => {
@@ -106,218 +77,190 @@ export default function App() {
     setRejectModal({ show: false, aspirasiId: null, reason: '' });
   };
 
-  // --- FITUR JADWAL ---
-  const tambahJadwal = async (e) => {
-    e.preventDefault();
-    const { error } = await supabase.from('desa_jadwal').insert([{
-      title: e.target.title.value,
-      date: e.target.date.value,
-      time: e.target.time.value,
-      location: e.target.location.value,
-      description: e.target.description.value
-    }]);
-    if (!error) {
-      alert("Jadwal baru berhasil dipublikasikan!");
-      setView('jadwal');
-    }
-  };
-
-  const hapusJadwal = async (id) => {
-    if (window.confirm("Hapus jadwal ini?")) {
-      await supabase.from('desa_jadwal').delete().eq('id', id);
-    }
-  };
-
-  // --- STYLES ---
+  // --- STYLES UNTUK TAMPILAN NYAMAN ---
   const styles = {
-    card: { background: 'white', borderRadius: '12px', border: '1px solid #e2e8f0', marginBottom: '15px', padding: '15px' },
-    input: { width: '100%', padding: '10px', margin: '8px 0', border: '1px solid #e2e8f0', borderRadius: '8px', fontSize: '14px', boxSizing: 'border-box' },
-    btn: { padding: '10px 15px', border: 'none', borderRadius: '8px', cursor: 'pointer', fontWeight: 'bold' },
+    card: { background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
+    input: { width: '100%', padding: '12px', margin: '10px 0', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box' },
+    btn: { padding: '12px 20px', border: 'none', borderRadius: '10px', cursor: 'pointer', fontWeight: 'bold' },
     badge: (s) => ({
-      padding: '4px 8px', borderRadius: '6px', fontSize: '10px', fontWeight: 'bold',
+      padding: '5px 12px', borderRadius: '20px', fontSize: '11px', fontWeight: 'bold', display: 'inline-block',
       background: s === 'SELESAI' ? '#dcfce7' : s === 'DIPROSES' ? '#fef9c3' : s === 'DITOLAK' ? '#fee2e2' : '#f1f5f9',
       color: s === 'SELESAI' ? '#166534' : s === 'DIPROSES' ? '#854d0e' : s === 'DITOLAK' ? '#991b1b' : '#475569'
     })
   };
 
-  if (view === 'login') {
-    return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f8fafc' }}>
-        <div style={{ ...styles.card, width: '320px', textAlign: 'center' }}>
-          <h2 style={{ color: '#2563eb' }}>Digital Desa 4.0</h2>
-          <form onSubmit={handleLogin}>
-            <input name="nama" placeholder="Nama Lengkap" style={styles.input} required />
-            <input name="password" type="password" placeholder="Kata Sandi" style={styles.input} required />
-            <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%' }}>Masuk</button>
-          </form>
-        </div>
+  if (view === 'login') return (
+    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '100vh', background: '#f8fafc', padding: '20px' }}>
+      <div style={{ ...styles.card, width: '100%', maxWidth: '350px', textAlign: 'center' }}>
+        <h2 style={{ color: '#2563eb', marginBottom: '25px' }}>Digital Desa 4.0</h2>
+        <form onSubmit={handleLogin}>
+          <input name="nama" placeholder="Nama Lengkap" style={styles.input} required />
+          <input name="password" type="password" placeholder="Kata Sandi" style={styles.input} required />
+          <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%', marginTop: '10px' }}>Masuk Sistem</button>
+        </form>
       </div>
-    );
-  }
+    </div>
+  );
 
   return (
-    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f1f5f9' }}>
-      <header style={{ display: 'flex', justifyContent: 'space-between', padding: '15px', background: 'white', borderBottom: '1px solid #e2e8f0' }}>
-        <div style={{ fontWeight: 'bold', color: '#2563eb' }}>Digital Desa 4.0</div>
-        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: '#f8fafc', border: '1px solid #e2e8f0', padding: '5px 10px', borderRadius: '6px' }}>
-          {isSidebarOpen ? '✕' : '☰'}
-        </button>
+    <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc', overflow: 'hidden' }}>
+      {/* Header Statis */}
+      <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderBottom: '1px solid #e2e8f0', zIndex: 1000 }}>
+        <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '18px' }}>Digital Desa 4.0</div>
+        <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '8px 15px', cursor: 'pointer', fontWeight: 'bold' }}>MENU</button>
       </header>
 
-      <div style={{ flex: 1, display: 'flex', overflow: 'hidden', position: 'relative' }}>
-        {/* Sidebar Navigasi */}
+      <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
+        {/* Sidebar Layar Penuh (Overlay) di Mobile, Samping di Desktop */}
         <div style={{ 
-          position: 'absolute', left: isSidebarOpen ? 0 : '-260px', top: 0, width: '250px', height: '100%', 
-          background: 'white', borderRight: '1px solid #e2e8f0', padding: '15px', zIndex: 100, transition: '0.3s ease' 
+          position: 'absolute', top: 0, left: isSidebarOpen ? 0 : '-100%', width: '280px', height: '100%', 
+          background: 'white', zIndex: 999, transition: '0.3s ease', borderRight: '1px solid #e2e8f0', padding: '20px', boxSizing: 'border-box'
         }}>
-          <nav style={{ display: 'flex', flexDirection: 'column', gap: '8px' }}>
-            <button onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>🏠 Beranda</button>
-            <button onClick={() => { setView('jadwal'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>📅 Jadwal Desa</button>
-            <button onClick={() => { setView('chat_grup'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>💬 Ruang Warga</button>
-            {user.role === 'warga' && <button onClick={() => { setView('form'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>✍️ Buat Aspirasi</button>}
+          <nav style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+            <button onClick={() => { setView('dashboard'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'dashboard' ? '#eff6ff' : 'none', color: view === 'dashboard' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>🏠 Beranda</button>
+            <button onClick={() => { setView('jadwal'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'jadwal' ? '#eff6ff' : 'none', color: view === 'jadwal' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>📅 Jadwal Desa</button>
+            <button onClick={() => { setView('chat_grup'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'chat_grup' ? '#eff6ff' : 'none', color: view === 'chat_grup' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>💬 Ruang Warga</button>
+            {user.role === 'warga' && <button onClick={() => { setView('form'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'form' ? '#eff6ff' : 'none', color: view === 'form' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>✍️ Buat Aspirasi</button>}
             {user.role === 'admin' && (
               <>
-                <button onClick={() => { setView('kelola_aspirasi'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>⚙️ Kelola Aspirasi</button>
-                <button onClick={() => { setView('tambah_jadwal'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '12px', background: 'none', border: 'none', fontWeight: 'bold' }}>➕ Buat Jadwal</button>
+                <hr style={{ border: '0.5px solid #f1f5f9' }} />
+                <button onClick={() => { setView('kelola_aspirasi'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'kelola_aspirasi' ? '#eff6ff' : 'none', color: view === 'kelola_aspirasi' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>⚙️ Kelola Aspirasi</button>
+                <button onClick={() => { setView('tambah_jadwal'); setIsSidebarOpen(false); }} style={{ textAlign: 'left', padding: '15px', border: 'none', background: view === 'tambah_jadwal' ? '#eff6ff' : 'none', color: view === 'tambah_jadwal' ? '#2563eb' : '#64748b', borderRadius: '10px', fontWeight: 'bold' }}>➕ Buat Jadwal</button>
               </>
             )}
-            <button onClick={handleLogout} style={{ textAlign: 'left', padding: '12px', color: '#ef4444', background: '#fef2f2', border: 'none', borderRadius: '8px', marginTop: '20px', fontWeight: 'bold' }}>🚪 Keluar</button>
+            <button onClick={handleLogout} style={{ marginTop: '20px', padding: '15px', color: '#ef4444', background: '#fef2f2', border: 'none', borderRadius: '10px', fontWeight: 'bold' }}>🚪 Keluar</button>
           </nav>
         </div>
 
-        <main style={{ flex: 1, padding: '20px', overflowY: 'auto' }}>
-          {/* DASHBOARD ASPIRASI */}
-          {view === 'dashboard' && (
-            <div>
-              <h3>Kabar Aspirasi Warga</h3>
-              {aspirations.map(a => (
-                <div key={a.id} style={styles.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <span style={styles.badge(a.status)}>{a.status}</span>
-                    <small>{new Date(a.created_at).toLocaleDateString()}</small>
-                  </div>
-                  <h4 style={{ margin: '10px 0 5px' }}>{a.judul}</h4>
-                  <p style={{ fontSize: '13px', color: '#64748b' }}>{a.deskripsi}</p>
-                  {a.lampiran && <img src={a.lampiran} style={{ width: '100%', borderRadius: '8px', marginTop: '10px', maxHeight: '200px', objectFit: 'cover' }} />}
-                  {a.alasan_admin && (
-                    <div style={{ marginTop: '10px', padding: '10px', background: '#fee2e2', borderRadius: '8px', fontSize: '12px', color: '#991b1b' }}>
-                      <strong>Alasan Admin:</strong> {a.alasan_admin}
+        {/* Area Konten Utama - Fokus di Tengah */}
+        <main style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
+          <div style={{ width: '100%', maxWidth: '700px' }}>
+            
+            {view === 'dashboard' && (
+              <div>
+                <h3 style={{ marginBottom: '20px' }}>📢 Kabar Aspirasi Warga</h3>
+                {aspirations.map(a => (
+                  <div key={a.id} style={styles.card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <span style={styles.badge(a.status)}>{a.status}</span>
+                      <small style={{ color: '#94a3b8' }}>{new Date(a.created_at).toLocaleDateString()}</small>
                     </div>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>{a.judul}</h4>
+                    <p style={{ color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>{a.deskripsi}</p>
+                    {a.lampiran && <img src={a.lampiran} style={{ width: '100%', borderRadius: '12px', marginTop: '15px', maxHeight: '300px', objectFit: 'cover' }} />}
+                    {a.alasan_admin && (
+                      <div style={{ marginTop: '15px', padding: '12px', background: '#fff1f2', borderRadius: '10px', fontSize: '13px', color: '#be123c', border: '1px solid #fecaca' }}>
+                        <strong>Catatan Admin:</strong> {a.alasan_admin}
+                      </div>
+                    )}
+                    <div style={{ marginTop: '15px', fontSize: '12px', color: '#94a3b8', textAlign: 'right' }}>Dilaporkan oleh: <strong>{a.nama}</strong></div>
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {/* JADWAL DESA */}
-          {view === 'jadwal' && (
-            <div>
-              <h3>Agenda Kegiatan Desa</h3>
-              {schedules.length === 0 && <p>Belum ada jadwal kegiatan.</p>}
-              {schedules.map(s => (
-                <div key={s.id} style={styles.card}>
-                  <div style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '14px' }}>{s.date} | {s.time} WIB</div>
-                  <h4 style={{ margin: '8px 0' }}>{s.title}</h4>
-                  <p style={{ fontSize: '13px', margin: '2px 0' }}>📍 <strong>Lokasi:</strong> {s.location}</p>
-                  <p style={{ fontSize: '13px', color: '#64748b' }}>{s.description}</p>
-                  {user.role === 'admin' && (
-                    <button onClick={() => hapusJadwal(s.id)} style={{ color: '#ef4444', border: 'none', background: 'none', padding: 0, marginTop: '10px', cursor: 'pointer', fontWeight: 'bold', fontSize: '12px' }}>🗑 Hapus Jadwal</button>
-                  )}
-                </div>
-              ))}
-            </div>
-          )}
+            {view === 'jadwal' && (
+              <div>
+                <h3 style={{ marginBottom: '20px' }}>📅 Agenda Kegiatan Desa</h3>
+                {schedules.length === 0 ? <p style={{ textAlign: 'center', padding: '50px', color: '#94a3b8' }}>Belum ada jadwal kegiatan.</p> : 
+                  schedules.map(s => (
+                  <div key={s.id} style={styles.card}>
+                    <div style={{ color: '#2563eb', fontWeight: 'bold', fontSize: '14px', marginBottom: '5px' }}>{s.date} | {s.time} WIB</div>
+                    <h4 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>{s.title}</h4>
+                    <div style={{ fontSize: '14px', color: '#475569' }}>📍 <strong>Lokasi:</strong> {s.location}</div>
+                    <p style={{ fontSize: '14px', color: '#64748b', marginTop: '10px' }}>{s.description}</p>
+                    {user.role === 'admin' && (
+                      <button onClick={async () => { if(window.confirm("Hapus?")) await supabase.from('desa_jadwal').delete().eq('id', s.id); fetchInitialData(); }} style={{ color: '#ef4444', background: 'none', border: 'none', cursor: 'pointer', marginTop: '15px', fontSize: '12px', fontWeight: 'bold' }}>🗑️ Hapus Jadwal</button>
+                    )}
+                  </div>
+                ))}
+              </div>
+            )}
 
-          {/* CHAT GRUP */}
-          {view === 'chat_grup' && (
-            <div style={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-              <div style={{ flex: 1, background: 'white', borderRadius: '12px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0' }}>
-                {globalMessages.map(m => (
-                  <div key={m.id} style={{ textAlign: m.sender === user.name ? 'right' : 'left', marginBottom: '10px' }}>
-                    <div style={{ display: 'inline-block', padding: '10px 14px', borderRadius: '15px', background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', fontSize: '14px' }}>
-                      <small style={{ display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '2px' }}>{m.sender}</small>
-                      {m.text}
+            {view === 'chat_grup' && (
+              <div style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
+                <div style={{ flex: 1, background: 'white', borderRadius: '15px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {globalMessages.map(m => (
+                    <div key={m.id} style={{ textAlign: m.sender === user.name ? 'right' : 'left' }}>
+                      <div style={{ display: 'inline-block', padding: '10px 15px', borderRadius: '15px', background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', fontSize: '14px' }}>
+                        <small style={{ display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>{m.sender}</small>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+                <form onSubmit={async (e) => { e.preventDefault(); if(!chatInput.trim()) return; await supabase.from('desa_chats').insert([{ sender: user.name, text: chatInput }]); setChatInput(''); fetchInitialData(); }} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                  <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik pesan..." style={{ ...styles.input, margin: 0 }} />
+                  <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
+                </form>
+              </div>
+            )}
+
+            {view === 'form' && (
+              <div style={styles.card}>
+                <h3 style={{ marginBottom: '20px' }}>✍️ Buat Aspirasi Baru</h3>
+                <form onSubmit={tambahAspirasi}>
+                  <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Judul Laporan</label>
+                  <input name="judul" placeholder="Contoh: Lampu Jalan Mati" style={styles.input} required />
+                  <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Detail Masalah</label>
+                  <textarea name="deskripsi" placeholder="Ceritakan detail lokasinya..." style={{ ...styles.input, height: '120px' }} required />
+                  <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Unggah Foto Bukti (Opsional)</label>
+                  <input type="file" onChange={handleFileChange} accept="image/*" style={styles.input} />
+                  {tempFile && <img src={tempFile} style={{ width: '100%', borderRadius: '10px', margin: '15px 0' }} />}
+                  <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%', marginTop: '10px' }}>Kirim Aspirasi Sekarang</button>
+                </form>
+              </div>
+            )}
+
+            {view === 'kelola_aspirasi' && user.role === 'admin' && (
+              <div>
+                <h3 style={{ marginBottom: '20px' }}>⚙️ Manajemen Aspirasi Warga</h3>
+                {aspirations.map(a => (
+                  <div key={a.id} style={styles.card}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
+                      <strong>{a.nama}</strong>
+                      <span style={styles.badge(a.status)}>{a.status}</span>
+                    </div>
+                    <p style={{ fontSize: '14px', marginBottom: '15px' }}>{a.judul}</p>
+                    <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap' }}>
+                      <button onClick={() => updateStatusAspirasi(a.id, 'DIBACA')} style={{ ...styles.btn, fontSize: '11px', background: '#f1f5f9', flex: 1 }}>DIBACA</button>
+                      <button onClick={() => updateStatusAspirasi(a.id, 'DIPROSES')} style={{ ...styles.btn, fontSize: '11px', background: '#fef9c3', flex: 1 }}>PROSES</button>
+                      <button onClick={() => updateStatusAspirasi(a.id, 'SELESAI')} style={{ ...styles.btn, fontSize: '11px', background: '#dcfce7', flex: 1 }}>SELESAI</button>
+                      <button onClick={() => setRejectModal({ show: true, aspirasiId: a.id, reason: '' })} style={{ ...styles.btn, fontSize: '11px', background: '#fee2e2', color: '#991b1b', flex: 1 }}>TOLAK</button>
                     </div>
                   </div>
                 ))}
               </div>
-              <form onSubmit={kirimPesanGrup} style={{ display: 'flex', gap: '8px', marginTop: '10px' }}>
-                <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Tulis pesan..." style={{ ...styles.input, margin: 0 }} />
-                <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
-              </form>
-            </div>
-          )}
+            )}
 
-          {/* FORM ASPIRASI (WARGA) */}
-          {view === 'form' && (
-            <div style={styles.card}>
-              <h3>Buat Aspirasi Baru</h3>
-              <form onSubmit={tambahAspirasi}>
-                <input name="judul" placeholder="Judul Aspirasi" style={styles.input} required />
-                <textarea name="deskripsi" placeholder="Jelaskan aspirasi Anda..." style={{ ...styles.input, height: '120px' }} required />
-                <label style={{ fontSize: '12px', fontWeight: 'bold' }}>Unggah Foto (Maks 2MB):</label>
-                <input type="file" onChange={handleFileChange} accept="image/*" style={styles.input} />
-                {tempFile && <img src={tempFile} style={{ width: '100%', borderRadius: '8px', marginBottom: '10px' }} />}
-                <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%' }}>Kirim Sekarang</button>
-              </form>
-            </div>
-          )}
-
-          {/* KELOLA ASPIRASI (ADMIN) */}
-          {view === 'kelola_aspirasi' && (
-            <div>
-              <h3>Manajemen Aspirasi</h3>
-              {aspirations.map(a => (
-                <div key={a.id} style={styles.card}>
-                  <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                    <strong>{a.nama}</strong>
-                    <span style={styles.badge(a.status)}>{a.status}</span>
+            {view === 'tambah_jadwal' && user.role === 'admin' && (
+              <div style={styles.card}>
+                <h3 style={{ marginBottom: '20px' }}>➕ Buat Agenda Desa Baru</h3>
+                <form onSubmit={tambahJadwal}>
+                  <input name="title" placeholder="Nama Kegiatan" style={styles.input} required />
+                  <div style={{ display: 'flex', gap: '10px' }}>
+                    <input name="date" type="date" style={styles.input} required />
+                    <input name="time" type="time" style={styles.input} required />
                   </div>
-                  <h4 style={{ margin: '10px 0' }}>{a.judul}</h4>
-                  <div style={{ display: 'flex', gap: '5px', flexWrap: 'wrap' }}>
-                    <button onClick={() => updateStatusAspirasi(a.id, 'DIBACA')} style={{ ...styles.btn, fontSize: '11px', background: '#f1f5f9' }}>DIBACA</button>
-                    <button onClick={() => updateStatusAspirasi(a.id, 'DIPROSES')} style={{ ...styles.btn, fontSize: '11px', background: '#fef9c3' }}>PROSES</button>
-                    <button onClick={() => updateStatusAspirasi(a.id, 'SELESAI')} style={{ ...styles.btn, fontSize: '11px', background: '#dcfce7' }}>SELESAI</button>
-                    <button onClick={() => setRejectModal({ show: true, aspirasiId: a.id, reason: '' })} style={{ ...styles.btn, fontSize: '11px', background: '#fee2e2', color: '#991b1b' }}>TOLAK</button>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-
-          {/* BUAT JADWAL (ADMIN) */}
-          {view === 'tambah_jadwal' && (
-            <div style={styles.card}>
-              <h3>Buat Agenda Baru</h3>
-              <form onSubmit={tambahJadwal}>
-                <input name="title" placeholder="Nama Kegiatan" style={styles.input} required />
-                <div style={{ display: 'flex', gap: '10px' }}>
-                  <input name="date" type="date" style={styles.input} required />
-                  <input name="time" type="time" style={styles.input} required />
-                </div>
-                <input name="location" placeholder="Lokasi Kegiatan" style={styles.input} required />
-                <textarea name="description" placeholder="Keterangan tambahan..." style={{ ...styles.input, height: '100px' }} />
-                <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%' }}>Publikasikan Jadwal</button>
-              </form>
-            </div>
-          )}
+                  <input name="location" placeholder="Lokasi (Misal: Balai Desa)" style={styles.input} required />
+                  <textarea name="description" placeholder="Keterangan tambahan..." style={{ ...styles.input, height: '80px' }} />
+                  <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white', width: '100%', marginTop: '10px' }}>Publikasikan Jadwal</button>
+                </form>
+              </div>
+            )}
+          </div>
         </main>
       </div>
 
-      {/* MODAL ALASAN PENOLAKAN (ADMIN) */}
+      {/* Modal Penolakan Berbasis Center */}
       {rejectModal.show && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.5)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
-          <div style={{ ...styles.card, width: '100%', maxWidth: '350px' }}>
-            <h4 style={{ marginTop: 0 }}>Alasan Penolakan</h4>
-            <textarea 
-              style={{ ...styles.input, height: '100px' }} 
-              placeholder="Jelaskan alasan laporan ditolak..."
-              value={rejectModal.reason} 
-              onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })}
-            />
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
+          <div style={{ ...styles.card, width: '100%', maxWidth: '350px', margin: 0 }}>
+            <h4 style={{ marginTop: 0 }}>Tolak Aspirasi</h4>
+            <textarea style={styles.input} value={rejectModal.reason} onChange={(e) => setRejectModal({ ...rejectModal, reason: e.target.value })} placeholder="Tulis alasan penolakan..." />
             <div style={{ display: 'flex', gap: '10px' }}>
               <button onClick={() => setRejectModal({ show: false, aspirasiId: null, reason: '' })} style={{ ...styles.btn, flex: 1, background: '#f1f5f9' }}>Batal</button>
-              <button onClick={() => updateStatusAspirasi(rejectModal.aspirasiId, 'DITOLAK', rejectModal.reason)} style={{ ...styles.btn, flex: 1, background: '#ef4444', color: 'white' }}>Kirim Alasan</button>
+              <button onClick={() => updateStatusAspirasi(rejectModal.aspirasiId, 'DITOLAK', rejectModal.reason)} style={{ ...styles.btn, background: '#ef4444', color: 'white', flex: 1 }}>Kirim</button>
             </div>
           </div>
         </div>
