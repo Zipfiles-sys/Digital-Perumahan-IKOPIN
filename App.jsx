@@ -3,7 +3,7 @@ import { createClient } from '@supabase/supabase-js';
 
 // --- KONFIGURASI DATABASE ONLINE ---
 const SUPABASE_URL = 'https://zubjpbyaivbbbksevxhu.supabase.co';
-const SUPABASE_ANON_KEY = 'KODE_ANON_PUBLIC_ANDA'; // Ganti dengan kode dari screenshot Anda
+const SUPABASE_ANON_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inp1YmpwYnlhaXZiYmJrc2V2eGh1Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3Nzg3MjA0NDAsImV4cCI6MjA5NDI5NjQ0MH0.BZ8itmIvXof6Bt6pdS9hHTzfjOsB9jMiU5ZffoWama8'; 
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
