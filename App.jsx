@@ -203,7 +203,7 @@ export default function App() {
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Judul Laporan</label>
                   <input name="judul" placeholder="Contoh: Lampu Jalan Mati" style={styles.input} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Detail Masalah</label>
-                  <textarea name="deskripsi" placeholder="Ceritakan detail lokasinya..." style={{ ...styles.input, height: '120px' }} required />
+                  <textarea name="deskripsi" placeholder="Ceritakan detail lokasinya" style={{ ...styles.input, height: '120px' }} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Unggah Foto Bukti (Opsional)</label>
                   <input type="file" onChange={handleFileChange} accept="image/*" style={styles.input} />
                   {tempFile && <img src={tempFile} style={{ width: '100%', borderRadius: '10px', margin: '15px 0' }} />}
