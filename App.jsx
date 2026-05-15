@@ -23,29 +23,27 @@ export default function App() {
   useEffect(() => {
     fetchInitialData();
 
-    // Listener Chat Real-time (Pesan langsung muncul tanpa refresh)
+    // Listener Chat Real-time: Menggunakan skema 'public' yang spesifik
     const chatSub = supabase
-      .channel('room_chats')
-      .on('postgres_changes', { event: 'INSERT', table: 'desa_chats' }, (payload) => {
-        setGlobalMessages((prev) => [...prev, payload.new]);
+      .channel('desa_chats_channel')
+      .on('postgres_changes', { 
+        event: 'INSERT', 
+        schema: 'public', 
+        table: 'desa_chats' 
+      }, (payload) => {
+        // Cek jika pesan belum ada di state (menghindari duplikasi saat pengirim chat)
+        setGlobalMessages((prev) => {
+          const isExist = prev.find(m => m.id === payload.new.id);
+          return isExist ? prev : [...prev, payload.new];
+        });
       })
       .subscribe();
 
     // Listener Aspirasi Real-time
-    const aspSub = supabase
-      .channel('room_asp')
-      .on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, () => {
-        fetchInitialData();
-      })
-      .subscribe();
-
+    const aspSub = supabase.channel('room_asp').on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, fetchInitialData).subscribe();
+    
     // Listener Jadwal Real-time
-    const schSub = supabase
-      .channel('room_sch')
-      .on('postgres_changes', { event: '*', table: 'desa_jadwal' }, () => {
-        fetchInitialData();
-      })
-      .subscribe();
+    const schSub = supabase.channel('room_sch').on('postgres_changes', { event: '*', table: 'desa_jadwal' }, fetchInitialData).subscribe();
 
     return () => {
       supabase.removeChannel(chatSub);
@@ -63,6 +61,32 @@ export default function App() {
     if (sch) setSchedules(sch);
   }
 
+  // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE) ---
+  const kirimPesanGrup = async (e) => {
+    e.preventDefault();
+    if (!chatInput.trim()) return;
+
+    const pesanBaru = {
+      id: Date.now(), // ID sementara agar langsung muncul di layar pengirim
+      sender: user.name,
+      text: chatInput,
+      created_at: new Date().toISOString()
+    };
+
+    // Langsung muncul di layar pengirim tanpa menunggu database (INSTAN)
+    setGlobalMessages((prev) => [...prev, pesanBaru]);
+    const teksKirim = chatInput;
+    setChatInput('');
+
+    // Kirim ke Database
+    const { error } = await supabase.from('desa_chats').insert([{ sender: user.name, text: teksKirim }]);
+    if (error) {
+      alert("Gagal mengirim pesan ke server.");
+      fetchInitialData(); // Refresh jika gagal untuk sinkronisasi ulang
+    }
+  };
+
+  // --- LOGIKA LOGIN ---
   const handleLogin = (e) => {
     e.preventDefault();
     const name = e.target.nama.value;
@@ -208,7 +232,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <form onSubmit={async (e) => { e.preventDefault(); if(!chatInput.trim()) return; await supabase.from('desa_chats').insert([{ sender: user.name, text: chatInput }]); setChatInput(''); }} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                <form onSubmit={kirimPesanGrup} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                   <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik pesan..." style={{ ...styles.input, margin: 0 }} />
                   <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
                 </form>
