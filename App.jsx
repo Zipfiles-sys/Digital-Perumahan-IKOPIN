@@ -19,11 +19,34 @@ export default function App() {
   const [schedules, setSchedules] = useState([]);
   const [rejectModal, setRejectModal] = useState({ show: false, aspirasiId: null, reason: '' });
 
+  // --- AMBIL DATA DENGAN SISTEM REAL-TIME YANG DIPERBAIKI ---
   useEffect(() => {
     fetchInitialData();
-    const chatSub = supabase.channel('room_chats').on('postgres_changes', { event: 'INSERT', table: 'desa_chats' }, fetchInitialData).subscribe();
-    const aspSub = supabase.channel('room_asp').on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, fetchInitialData).subscribe();
-    const schSub = supabase.channel('room_sch').on('postgres_changes', { event: '*', table: 'desa_jadwal' }, fetchInitialData).subscribe();
+
+    // Listener Chat Real-time (Pesan langsung muncul tanpa refresh)
+    const chatSub = supabase
+      .channel('room_chats')
+      .on('postgres_changes', { event: 'INSERT', table: 'desa_chats' }, (payload) => {
+        setGlobalMessages((prev) => [...prev, payload.new]);
+      })
+      .subscribe();
+
+    // Listener Aspirasi Real-time
+    const aspSub = supabase
+      .channel('room_asp')
+      .on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, () => {
+        fetchInitialData();
+      })
+      .subscribe();
+
+    // Listener Jadwal Real-time
+    const schSub = supabase
+      .channel('room_sch')
+      .on('postgres_changes', { event: '*', table: 'desa_jadwal' }, () => {
+        fetchInitialData();
+      })
+      .subscribe();
+
     return () => {
       supabase.removeChannel(chatSub);
       supabase.removeChannel(aspSub);
@@ -77,7 +100,6 @@ export default function App() {
     setRejectModal({ show: false, aspirasiId: null, reason: '' });
   };
 
-  // --- STYLES UNTUK TAMPILAN NYAMAN ---
   const styles = {
     card: { background: 'white', borderRadius: '15px', padding: '20px', marginBottom: '20px', border: '1px solid #e2e8f0', boxShadow: '0 4px 6px -1px rgba(0,0,0,0.05)' },
     input: { width: '100%', padding: '12px', margin: '10px 0', border: '1px solid #cbd5e1', borderRadius: '10px', fontSize: '14px', boxSizing: 'border-box' },
@@ -104,14 +126,12 @@ export default function App() {
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', height: '100vh', background: '#f8fafc', overflow: 'hidden' }}>
-      {/* Header Statis */}
       <header style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '15px 20px', background: 'white', borderBottom: '1px solid #e2e8f0', zIndex: 1000 }}>
         <div style={{ fontWeight: 'bold', color: '#2563eb', fontSize: '18px' }}>Digital Desa 4.0</div>
         <button onClick={() => setIsSidebarOpen(!isSidebarOpen)} style={{ background: '#f1f5f9', border: 'none', borderRadius: '8px', padding: '8px 15px', cursor: 'pointer', fontWeight: 'bold' }}>MENU</button>
       </header>
 
       <div style={{ flex: 1, display: 'flex', position: 'relative', overflow: 'hidden' }}>
-        {/* Sidebar Layar Penuh (Overlay) di Mobile, Samping di Desktop */}
         <div style={{ 
           position: 'absolute', top: 0, left: isSidebarOpen ? 0 : '-100%', width: '280px', height: '100%', 
           background: 'white', zIndex: 999, transition: '0.3s ease', borderRight: '1px solid #e2e8f0', padding: '20px', boxSizing: 'border-box'
@@ -132,7 +152,6 @@ export default function App() {
           </nav>
         </div>
 
-        {/* Area Konten Utama - Fokus di Tengah */}
         <main style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: '700px' }}>
             
@@ -189,7 +208,7 @@ export default function App() {
                     </div>
                   ))}
                 </div>
-                <form onSubmit={async (e) => { e.preventDefault(); if(!chatInput.trim()) return; await supabase.from('desa_chats').insert([{ sender: user.name, text: chatInput }]); setChatInput(''); fetchInitialData(); }} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
+                <form onSubmit={async (e) => { e.preventDefault(); if(!chatInput.trim()) return; await supabase.from('desa_chats').insert([{ sender: user.name, text: chatInput }]); setChatInput(''); }} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
                   <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik pesan..." style={{ ...styles.input, margin: 0 }} />
                   <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
                 </form>
@@ -252,7 +271,6 @@ export default function App() {
         </main>
       </div>
 
-      {/* Modal Penolakan Berbasis Center */}
       {rejectModal.show && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 2000, padding: '20px' }}>
           <div style={{ ...styles.card, width: '100%', maxWidth: '350px', margin: 0 }}>
