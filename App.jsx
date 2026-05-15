@@ -19,11 +19,11 @@ export default function App() {
   const [schedules, setSchedules] = useState([]);
   const [rejectModal, setRejectModal] = useState({ show: false, aspirasiId: null, reason: '' });
 
-  // --- AMBIL DATA DENGAN SISTEM REAL-TIME YANG DIPERBAIKI ---
+  // --- AMBIL DATA DENGAN SISTEM REAL-TIME ---
   useEffect(() => {
     fetchInitialData();
 
-    // Listener Chat Real-time: Menggunakan skema 'public' yang spesifik
+    // Listener Chat Real-time: Pesan baru ditaruh di paling depan (index 0)
     const chatSub = supabase
       .channel('desa_chats_channel')
       .on('postgres_changes', { 
@@ -31,18 +31,15 @@ export default function App() {
         schema: 'public', 
         table: 'desa_chats' 
       }, (payload) => {
-        // Cek jika pesan belum ada di state (menghindari duplikasi saat pengirim chat)
         setGlobalMessages((prev) => {
           const isExist = prev.find(m => m.id === payload.new.id);
-          return isExist ? prev : [...prev, payload.new];
+          // Menggunakan spread operator untuk menaruh payload.new di awal array
+          return isExist ? prev : [payload.new, ...prev];
         });
       })
       .subscribe();
 
-    // Listener Aspirasi Real-time
     const aspSub = supabase.channel('room_asp').on('postgres_changes', { event: '*', table: 'desa_aspirasi' }, fetchInitialData).subscribe();
-    
-    // Listener Jadwal Real-time
     const schSub = supabase.channel('room_sch').on('postgres_changes', { event: '*', table: 'desa_jadwal' }, fetchInitialData).subscribe();
 
     return () => {
@@ -53,40 +50,42 @@ export default function App() {
   }, []);
 
   async function fetchInitialData() {
-    const { data: chats } = await supabase.from('desa_chats').select('*').order('created_at', { ascending: true });
+    // Chat diurutkan DESCENDING agar yang terbaru berada di atas sejak awal load
+    const { data: chats } = await supabase.from('desa_chats').select('*').order('created_at', { ascending: false });
     if (chats) setGlobalMessages(chats);
+
     const { data: aspi } = await supabase.from('desa_aspirasi').select('*').order('created_at', { ascending: false });
     if (aspi) setAspirations(aspi);
+
     const { data: sch } = await supabase.from('desa_jadwal').select('*').order('date', { ascending: true });
     if (sch) setSchedules(sch);
   }
 
-  // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE) ---
+  // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE DI ATAS) ---
   const kirimPesanGrup = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
 
     const pesanBaru = {
-      id: Date.now(), // ID sementara agar langsung muncul di layar pengirim
+      id: Date.now(),
       sender: user.name,
       text: chatInput,
       created_at: new Date().toISOString()
     };
 
-    // Langsung muncul di layar pengirim tanpa menunggu database (INSTAN)
-    setGlobalMessages((prev) => [...prev, pesanBaru]);
+    // Langsung muncul di paling atas layar pengirim (Optimistic)
+    setGlobalMessages((prev) => [pesanBaru, ...prev]);
     const teksKirim = chatInput;
     setChatInput('');
 
-    // Kirim ke Database
     const { error } = await supabase.from('desa_chats').insert([{ sender: user.name, text: teksKirim }]);
     if (error) {
-      alert("Gagal mengirim pesan ke server.");
-      fetchInitialData(); // Refresh jika gagal untuk sinkronisasi ulang
+      alert("Gagal mengirim pesan.");
+      fetchInitialData(); 
     }
   };
 
-  // --- LOGIKA LOGIN ---
+  // --- LOGIKA LOGIN & LOGOUT ---
   const handleLogin = (e) => {
     e.preventDefault();
     const name = e.target.nama.value;
@@ -179,6 +178,28 @@ export default function App() {
         <main style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', justifyContent: 'center' }}>
           <div style={{ width: '100%', maxWidth: '700px' }}>
             
+            {view === 'chat_grup' && (
+              <div style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
+                {/* Input ditaruh di atas untuk kemudahan akses saat pesan terbaru ada di atas */}
+                <form onSubmit={kirimPesanGrup} style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
+                  <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Tulis pesan baru..." style={{ ...styles.input, margin: 0 }} />
+                  <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
+                </form>
+
+                <div style={{ flex: 1, background: 'white', borderRadius: '15px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
+                  {globalMessages.map(m => (
+                    <div key={m.id} style={{ textAlign: m.sender === user.name ? 'right' : 'left' }}>
+                      <div style={{ display: 'inline-block', padding: '10px 15px', borderRadius: '15px', background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', fontSize: '14px' }}>
+                        <small style={{ display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>{m.sender}</small>
+                        {m.text}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* View Beranda */}
             {view === 'dashboard' && (
               <div>
                 <h3 style={{ marginBottom: '20px' }}>📢 Kabar Aspirasi Warga</h3>
@@ -202,6 +223,7 @@ export default function App() {
               </div>
             )}
 
+            {/* View Jadwal */}
             {view === 'jadwal' && (
               <div>
                 <h3 style={{ marginBottom: '20px' }}>📅 Agenda Kegiatan Desa</h3>
@@ -220,25 +242,7 @@ export default function App() {
               </div>
             )}
 
-            {view === 'chat_grup' && (
-              <div style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
-                <div style={{ flex: 1, background: 'white', borderRadius: '15px', padding: '15px', overflowY: 'auto', border: '1px solid #e2e8f0', display: 'flex', flexDirection: 'column', gap: '12px' }}>
-                  {globalMessages.map(m => (
-                    <div key={m.id} style={{ textAlign: m.sender === user.name ? 'right' : 'left' }}>
-                      <div style={{ display: 'inline-block', padding: '10px 15px', borderRadius: '15px', background: m.sender === user.name ? '#2563eb' : '#f1f5f9', color: m.sender === user.name ? 'white' : '#1e293b', fontSize: '14px' }}>
-                        <small style={{ display: 'block', fontWeight: 'bold', fontSize: '10px', marginBottom: '3px' }}>{m.sender}</small>
-                        {m.text}
-                      </div>
-                    </div>
-                  ))}
-                </div>
-                <form onSubmit={kirimPesanGrup} style={{ display: 'flex', gap: '10px', marginTop: '15px' }}>
-                  <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Ketik pesan..." style={{ ...styles.input, margin: 0 }} />
-                  <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
-                </form>
-              </div>
-            )}
-
+            {/* ... Fitur admin lainnya (kelola_aspirasi, tambah_jadwal, form) tetap sama ... */}
             {view === 'form' && (
               <div style={styles.card}>
                 <h3 style={{ marginBottom: '20px' }}>✍️ Buat Aspirasi Baru</h3>
