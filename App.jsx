@@ -50,15 +50,31 @@ export default function App() {
   }, []);
 
   async function fetchInitialData() {
-    // Chat diurutkan DESCENDING agar yang terbaru berada di atas sejak awal load
-    const { data: chats } = await supabase.from('desa_chats').select('*').order('created_at', { ascending: false });
-    if (chats) setGlobalMessages(chats);
+    try {
+      // PERBAIKAN UTAMA: Diurutkan berdasarkan 'id' secara descending karena kolom 'created_at' belum ada di database kamu
+      const { data: chats, error: chatError } = await supabase
+        .from('desa_chats')
+        .select('*')
+        .order('id', { ascending: false });
+      if (chatError) throw chatError;
+      if (chats) setGlobalMessages(chats);
 
-    const { data: aspi } = await supabase.from('desa_aspirasi').select('*').order('created_at', { ascending: false });
-    if (aspi) setAspirations(aspi);
+      // PERBAIKAN UTAMA: Menggunakan 'id' descending agar aspirasi warga yang tersimpan langsung muncul kembali
+      const { data: aspi, error: aspError } = await supabase
+        .from('desa_aspirasi')
+        .select('*')
+        .order('id', { ascending: false });
+      if (aspError) throw aspError;
+      if (aspi) setAspirations(aspi);
 
-    const { data: sch } = await supabase.from('desa_jadwal').select('*').order('date', { ascending: true });
-    if (sch) setSchedules(sch);
+      const { data: sch, error: schError } = await supabase
+        .from('desa_jadwal')
+        .select('*');
+      if (schError) throw schError;
+      if (sch) setSchedules(sch);
+    } catch (err) {
+      console.error("Gagal memuat data dari Supabase:", err.message);
+    }
   }
 
   // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE DI ATAS) ---
@@ -67,10 +83,9 @@ export default function App() {
     if (!chatInput.trim()) return;
 
     const pesanBaru = {
-      id: Date.now(),
+      id: "TEMP-" + Date.now(),
       sender: user.name,
-      text: chatInput,
-      created_at: new Date().toISOString()
+      text: chatInput
     };
 
     // Langsung muncul di paling atas layar pengirim (Optimistic)
@@ -180,7 +195,6 @@ export default function App() {
             
             {view === 'chat_grup' && (
               <div style={{ height: 'calc(100vh - 150px)', display: 'flex', flexDirection: 'column' }}>
-                {/* Input ditaruh di atas untuk kemudahan akses saat pesan terbaru ada di atas */}
                 <form onSubmit={kirimPesanGrup} style={{ display: 'flex', gap: '10px', marginBottom: '15px' }}>
                   <input value={chatInput} onChange={e => setChatInput(e.target.value)} placeholder="Tulis pesan baru..." style={{ ...styles.input, margin: 0 }} />
                   <button type="submit" style={{ ...styles.btn, background: '#2563eb', color: 'white' }}>Kirim</button>
@@ -199,7 +213,6 @@ export default function App() {
               </div>
             )}
 
-            {/* View Beranda */}
             {view === 'dashboard' && (
               <div>
                 <h3 style={{ marginBottom: '20px' }}>📢 Kabar Aspirasi Warga</h3>
@@ -207,7 +220,6 @@ export default function App() {
                   <div key={a.id} style={styles.card}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <span style={styles.badge(a.status)}>{a.status}</span>
-                      <small style={{ color: '#94a3b8' }}>{new Date(a.created_at).toLocaleDateString()}</small>
                     </div>
                     <h4 style={{ margin: '0 0 10px 0', fontSize: '18px' }}>{a.judul}</h4>
                     <p style={{ color: '#475569', fontSize: '14px', lineHeight: '1.6' }}>{a.deskripsi}</p>
@@ -223,7 +235,6 @@ export default function App() {
               </div>
             )}
 
-            {/* View Jadwal */}
             {view === 'jadwal' && (
               <div>
                 <h3 style={{ marginBottom: '20px' }}>📅 Agenda Kegiatan Desa</h3>
@@ -242,7 +253,6 @@ export default function App() {
               </div>
             )}
 
-            {/* ... Fitur admin lainnya (kelola_aspirasi, tambah_jadwal, form) tetap sama ... */}
             {view === 'form' && (
               <div style={styles.card}>
                 <h3 style={{ marginBottom: '20px' }}>✍️ Buat Aspirasi Baru</h3>
@@ -250,7 +260,7 @@ export default function App() {
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Judul Laporan</label>
                   <input name="judul" placeholder="Contoh: Lampu Jalan Mati" style={styles.input} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Detail Masalah</label>
-                  <textarea name="deskripsi" placeholder="Ceritakan detailnya" style={{ ...styles.input, height: '120px' }} required />
+                  <textarea name="deskripsi" placeholder="Ceritakan detail lokasinya" style={{ ...styles.input, height: '120px' }} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Unggah Foto Bukti (Opsional)</label>
                   <input type="file" onChange={handleFileChange} accept="image/*" style={styles.input} />
                   {tempFile && <img src={tempFile} style={{ width: '100%', borderRadius: '10px', margin: '15px 0' }} />}
