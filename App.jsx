@@ -33,7 +33,6 @@ export default function App() {
       }, (payload) => {
         setGlobalMessages((prev) => {
           const isExist = prev.find(m => m.id === payload.new.id);
-          // Menggunakan spread operator untuk menaruh payload.new di awal array
           return isExist ? prev : [payload.new, ...prev];
         });
       })
@@ -50,15 +49,31 @@ export default function App() {
   }, []);
 
   async function fetchInitialData() {
-    // FOKUS PERBAIKAN: Diurutkan berdasarkan 'id' karena kolom 'created_at' tidak ada di tabel Supabase Anda
-    const { data: chats } = await supabase.from('desa_chats').select('*').order('id', { ascending: false });
-    if (chats) setGlobalMessages(chats);
+    try {
+      // Menggunakan order('id') karena kolom 'created_at' tidak tersedia di tabel Anda
+      const { data: chats, error: chatError } = await supabase
+        .from('desa_chats')
+        .select('*')
+        .order('id', { ascending: false });
+      if (chatError) throw chatError;
+      if (chats) setGlobalMessages(chats);
 
-    const { data: aspi } = await supabase.from('desa_aspirasi').select('*').order('id', { ascending: false });
-    if (aspi) setAspirations(aspi);
+      const { data: aspi, error: aspError } = await supabase
+        .from('desa_aspirasi')
+        .select('*')
+        .order('id', { ascending: false });
+      if (aspError) throw aspError;
+      if (aspi) setAspirations(aspi);
 
-    const { data: sch } = await supabase.from('desa_jadwal').select('*').order('date', { ascending: true });
-    if (sch) setSchedules(sch);
+      const { data: sch, error: schError } = await supabase
+        .from('desa_jadwal')
+        .select('*')
+        .order('date', { ascending: true });
+      if (schError) throw schError;
+      if (sch) setSchedules(sch);
+    } catch (err) {
+      console.error("Gagal mengambil data dari database Supabase:", err.message);
+    }
   }
 
   // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE DI ATAS) ---
@@ -69,8 +84,7 @@ export default function App() {
     const pesanBaru = {
       id: Date.now(),
       sender: user.name,
-      text: chatInput,
-      created_at: new Date().toISOString()
+      text: chatInput
     };
 
     // Langsung muncul di paling atas layar pengirim (Optimistic)
