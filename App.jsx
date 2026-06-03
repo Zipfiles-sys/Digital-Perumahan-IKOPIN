@@ -49,34 +49,36 @@ export default function App() {
   }, []);
 
   async function fetchInitialData() {
+    // Dipisahkan ke dalam blok try-catch mandiri agar kegagalan satu tabel tidak menyumbat tabel lainnya
     try {
-      // Menggunakan order('id') karena kolom 'created_at' tidak tersedia di tabel Anda
       const { data: chats, error: chatError } = await supabase
         .from('desa_chats')
         .select('*')
         .order('id', { ascending: false });
-      if (chatError) throw chatError;
+      if (chatError) console.error("Kendala membaca tabel desa_chats (Cek RLS Supabase):", chatError.message);
       if (chats) setGlobalMessages(chats);
+    } catch(e) { console.error(e); }
 
+    try {
       const { data: aspi, error: aspError } = await supabase
         .from('desa_aspirasi')
         .select('*')
         .order('id', { ascending: false });
-      if (aspError) throw aspError;
+      if (aspError) console.error("Kendala membaca tabel desa_aspirasi (Cek RLS Supabase):", aspError.message);
       if (aspi) setAspirations(aspi);
+    } catch(e) { console.error(e); }
 
+    try {
       const { data: sch, error: schError } = await supabase
         .from('desa_jadwal')
         .select('*')
         .order('date', { ascending: true });
-      if (schError) throw schError;
+      if (schError) console.error("Kendala membaca tabel desa_jadwal (Cek RLS Supabase):", schError.message);
       if (sch) setSchedules(sch);
-    } catch (err) {
-      console.error("Gagal mengambil data dari database Supabase:", err.message);
-    }
+    } catch(e) { console.error(e); }
   }
 
-  // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE DI ATAS) ---
+  // --- FUNGSI KIRIM CHAT ---
   const kirimPesanGrup = async (e) => {
     e.preventDefault();
     if (!chatInput.trim()) return;
@@ -87,14 +89,13 @@ export default function App() {
       text: chatInput
     };
 
-    // Langsung muncul di paling atas layar pengirim (Optimistic)
     setGlobalMessages((prev) => [pesanBaru, ...prev]);
     const teksKirim = chatInput;
     setChatInput('');
 
     const { error } = await supabase.from('desa_chats').insert([{ sender: user.name, text: teksKirim }]);
     if (error) {
-      alert("Gagal mengirim pesan.");
+      alert("Gagal mengirim pesan. Silakan periksa koneksi atau izin database.");
       fetchInitialData(); 
     }
   };
@@ -122,8 +123,12 @@ export default function App() {
 
   const tambahAspirasi = async (e) => {
     e.preventDefault();
-    await supabase.from('desa_aspirasi').insert([{ nama: user.name, judul: e.target.judul.value, deskripsi: e.target.deskripsi.value, status: 'DIKIRIM', lampiran: tempFile }]);
-    alert("Aspirasi terkirim!"); setTempFile(null); setView('dashboard');
+    const { error } = await supabase.from('desa_aspirasi').insert([{ nama: user.name, judul: e.target.judul.value, deskripsi: e.target.deskripsi.value, status: 'DIKIRIM', lampiran: tempFile }]);
+    if (error) {
+      alert("Gagal mengirim aspirasi: " + error.message);
+    } else {
+      alert("Aspirasi terkirim!"); setTempFile(null); setView('dashboard');
+    }
   };
 
   const tambahJadwal = async (e) => {
@@ -215,7 +220,8 @@ export default function App() {
             {view === 'dashboard' && (
               <div>
                 <h3 style={{ marginBottom: '20px' }}>📢 Kabar Aspirasi Warga</h3>
-                {aspirations.map(a => (
+                {aspirations.length === 0 ? <p style={{ textAlign: 'center', padding: '30px', color: '#94a3b8' }}>Belum ada aspirasi warga yang tersimpan atau periksa pengaturan RLS Supabase Anda.</p> : 
+                aspirations.map(a => (
                   <div key={a.id} style={styles.card}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: '10px' }}>
                       <span style={styles.badge(a.status)}>{a.status}</span>
