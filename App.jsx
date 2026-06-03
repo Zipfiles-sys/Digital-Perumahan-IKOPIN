@@ -50,31 +50,15 @@ export default function App() {
   }, []);
 
   async function fetchInitialData() {
-    try {
-      // PERBAIKAN UTAMA: Diurutkan berdasarkan 'id' secara descending karena kolom 'created_at' belum ada di database kamu
-      const { data: chats, error: chatError } = await supabase
-        .from('desa_chats')
-        .select('*')
-        .order('id', { ascending: false });
-      if (chatError) throw chatError;
-      if (chats) setGlobalMessages(chats);
+    // FOKUS PERBAIKAN: Diurutkan berdasarkan 'id' karena kolom 'created_at' tidak ada di tabel Supabase Anda
+    const { data: chats } = await supabase.from('desa_chats').select('*').order('id', { ascending: false });
+    if (chats) setGlobalMessages(chats);
 
-      // PERBAIKAN UTAMA: Menggunakan 'id' descending agar aspirasi warga yang tersimpan langsung muncul kembali
-      const { data: aspi, error: aspError } = await supabase
-        .from('desa_aspirasi')
-        .select('*')
-        .order('id', { ascending: false });
-      if (aspError) throw aspError;
-      if (aspi) setAspirations(aspi);
+    const { data: aspi } = await supabase.from('desa_aspirasi').select('*').order('id', { ascending: false });
+    if (aspi) setAspirations(aspi);
 
-      const { data: sch, error: schError } = await supabase
-        .from('desa_jadwal')
-        .select('*');
-      if (schError) throw schError;
-      if (sch) setSchedules(sch);
-    } catch (err) {
-      console.error("Gagal memuat data dari Supabase:", err.message);
-    }
+    const { data: sch } = await supabase.from('desa_jadwal').select('*').order('date', { ascending: true });
+    if (sch) setSchedules(sch);
   }
 
   // --- FUNGSI KIRIM CHAT (OPTIMISTIC UPDATE DI ATAS) ---
@@ -83,9 +67,10 @@ export default function App() {
     if (!chatInput.trim()) return;
 
     const pesanBaru = {
-      id: "TEMP-" + Date.now(),
+      id: Date.now(),
       sender: user.name,
-      text: chatInput
+      text: chatInput,
+      created_at: new Date().toISOString()
     };
 
     // Langsung muncul di paling atas layar pengirim (Optimistic)
@@ -260,7 +245,7 @@ export default function App() {
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Judul Laporan</label>
                   <input name="judul" placeholder="Contoh: Lampu Jalan Mati" style={styles.input} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Detail Masalah</label>
-                  <textarea name="deskripsi" placeholder="Ceritakan detail lokasinya" style={{ ...styles.input, height: '120px' }} required />
+                  <textarea name="deskripsi" placeholder="Ceritakan detailnya" style={{ ...styles.input, height: '120px' }} required />
                   <label style={{ fontSize: '13px', fontWeight: 'bold' }}>Unggah Foto Bukti (Opsional)</label>
                   <input type="file" onChange={handleFileChange} accept="image/*" style={styles.input} />
                   {tempFile && <img src={tempFile} style={{ width: '100%', borderRadius: '10px', margin: '15px 0' }} />}
